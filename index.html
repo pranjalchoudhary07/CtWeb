@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+
+<html>
+    <head>
+        <meta charset="utf-8">
+        <meta http-equiv="X-UA-Compatible" content="IE=edge">
+        <title>CT Web SDK</title>
+        <meta name="description" content="">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <link rel="manifest" href="/manifest.json">
+        <script type="text/javascript">
+            var clevertap = {event:[], profile:[], account:[], onUserLogin:[], notifications:[], privacy:[]};
+            // replace with the CLEVERTAP_ACCOUNT_ID with the actual ACCOUNT ID value from your Dashboard -> Settings page
+            clevertap.account.push({"id": "TEST-489-7K5-676Z"});
+            clevertap.privacy.push({optOut: false}); //set the flag to true, if the user of the device opts out of sharing their data
+            clevertap.privacy.push({useIP: false}); //set the flag to true, if the user agrees to share their IP data
+                (function () {
+                        var wzrk = document.createElement('script');
+                        wzrk.type = 'text/javascript';
+                        wzrk.async = true;
+                        wzrk.src = ('https:' == document.location.protocol ? 'https://d2r1yp2w7bby2u.cloudfront.net' : 'http://static.clevertap.com') + '/js/clevertap.min.js';
+                        var s = document.getElementsByTagName('script')[0];
+                        s.parentNode.insertBefore(wzrk, s);
+            })();
+            clevertap.notifications.push({
+            "titleText":'Would you like to receive Push Notifications?',
+            "bodyText":'We promise to only send you relevant content and give you updates on your transactions',
+            "okButtonText":'Sign me up!',   
+            "rejectButtonText":'No thanks',
+            "okButtonColor":'#f28046'});
+            clevertap.spa = true
+       </script>
+        <style>
+            body{
+                background-color: #DA3232;
+            }
+            h1{
+                text-align: center;
+                margin: 40px;
+            }
+            hr{
+                margin-bottom: 40px;
+                width: 30%;
+                text-align: center;
+            }
+            button {
+                background-color: transparent; /* Green */
+                border: 2px solid #fffff0;
+                width: 250px;
+                color: white;
+                margin-left: 40px !important;
+                margin-bottom: 40px !important;
+                padding: 15px 32px;
+                text-align: center;
+                text-decoration: none;
+                display: inline-block;
+                transition-duration: 0.4s;
+                font-size: 16px;
+                margin: 4px 2px;
+                box-shadow: 0 8px 16px 0 rgba(0,0,0,0.2), 0 6px 20px 0 rgba(0,0,0,0.2);
+                cursor: pointer;
+            }
+            button:active{
+                transform: translateY(4px);
+            }
+            button:hover{
+                box-shadow: 0 8px 16px 0 rgba(0,0,0,0.4), 0 6px 20px 0 rgba(0,0,0,0.4);
+            }
+        </style>
+    </head>
+    <body>
+        <h1 style="color: #fffff0;">CleverTap Web SDK</h1> <hr>
+        <button onclick="onUserLogin()">OnUser Login</button>    
+        <button onclick="webEvent()">Product Viewed</button>    
+        <button onclick="webEventD()">Detailed Product View</button>   
+        <button onclick="webPopUp()">Web Pop-Up</button> 
+        <button onclick="webExit()">Web Exit Intent</button>
+        <button onclick="webPush()">Web Push</button>
+        <script>
+            function onUserLogin(){
+                clevertap.onUserLogin.push({
+                    "Site": {
+                        "Name": "Ashton Kutcher",            // String
+                        "Identity": 0811,              // String or number
+                        "Email": "ashton@gmail.com",         // Email address of the user
+                        "Phone": "+917894561230",           // Phone (with the country code)
+                        "Gender": "M",                     // Can be either M or F
+                        "DOB": new Date(),                 // Date of Birth. Date object
+                        // optional fields. controls whether the user will be sent email, push etc.
+                        "MSG-email": true,                // Disable email notifications
+                        "MSG-push": true,                  // Enable push notifications
+                        "MSG-sms": true,                   // Enable sms notifications
+                        "MSG-whatsapp": true,              // Enable WhatsApp notifications
+                    }
+                })
+            }
+            function webEvent(){
+                clevertap.event.push("Web Product Viewed");
+            }
+            function webEventD(){
+                clevertap.event.push("Web Product Viewed", {
+                    "Product name":"Casio Chronograph Watch",
+                    "Category":"Mens Accessories",
+                    "Price":59.99,
+                    "Date": new Date()
+                });
+            }
+            function webPopUp(){
+                clevertap.event.push("Web Pop Up");
+            }
+            function webExit(){
+                clevertap.event.push("Web Exit Intent");
+            }
+            function webPush(){
+                clevertap.event.push("Web Push");
+            }
+        </script>
+        
+    </body>
+</html>
