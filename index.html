@@ -18,17 +18,10 @@
                         var wzrk = document.createElement('script');
                         wzrk.type = 'text/javascript';
                         wzrk.async = true;
-                        wzrk.src = ('https:' == document.location.protocol ? 'https://d2r1yp2w7bby2u.cloudfront.net' : 'http://static.clevertap.com') + '/js/a.js';
+                        wzrk.src = ('https:' == document.location.protocol ? 'https://d2r1yp2w7bby2u.cloudfront.net' : 'http://static.clevertap.com') + '/js/clevertap.min.js';
                         var s = document.getElementsByTagName('script')[0];
                         s.parentNode.insertBefore(wzrk, s);
             })();
-            clevertap.notifications.push({
-            "titleText":'Would you like to receive Push Notifications?',
-            "bodyText":'We promise to only send you relevant content and give you updates on your transactions',
-            "okButtonText":'Sign me up!',   
-            "rejectButtonText":'No thanks',
-            "okButtonColor":'#f28046'});
-            clevertap.spa = true
        </script>
         <style>
             body{
@@ -66,22 +59,48 @@
             button:hover{
                 box-shadow: 0 8px 16px 0 rgba(0,0,0,0.4), 0 6px 20px 0 rgba(0,0,0,0.4);
             }
+            .girl{
+                height: 500px;
+                width: 500px;
+            }
         </style>
     </head>
     <body>
         <h1 style="color: #fffff0;">CleverTap Web SDK</h1> <hr>
-        <button onclick="onUserLogin()">OnUserr Login</button>    
+        <button onclick="onUserLogin()">OnUser Login</button>    
         <button onclick="webEvent()">Product Viewed</button>    
         <button onclick="webEventD()">Detailed Product View</button>   
         <button onclick="webPopUp()">Web Pop-Up</button> 
         <button onclick="webExit()">Web Exit Intent</button>
-        <button onclick="webPush()">Web Push</button>
+        <button onclick="webPush()">Web Push</button> 
+        <button onclick="emailTest()">Email Pop Up</button>
+        
+        <!-- <form action="#">
+            <label for="email">Enter Email</label><br><br>
+            <input type="text" id="email"><br><br>
+            <button onclick="emailTest2()">submit</button>
+        </form> -->
         <script>
+            function emailTest2(){
+                clevertap.event.push("email");
+                var email = document.getElementById("email").value;
+                clevertap.onUserLogin.push({
+                    "Site":{
+                        "Email":email,
+                    }
+                })
+                console.log("event raised");
+            }
+            function emailTest() {
+                // var email = document.getElementById("email").value;
+                clevertap.event.push("webpopup test");
+                console.log("web pop");
+            }
             function onUserLogin(){
                 clevertap.onUserLogin.push({
                     "Site": {
                         "Name": "Ashton Kutcher",            // String
-                        "Identity": 0811,              // String or number
+                        "Identity": 1210,              // String or number
                         "Email": "ashton@gmail.com",         // Email address of the user
                         "Phone": "+917894561230",           // Phone (with the country code)
                         "Gender": "M",                     // Can be either M or F
@@ -96,6 +115,7 @@
             }
             function webEvent(){
                 clevertap.event.push("Web Product Viewed");
+                console.log("event pushed");
             }
             function webEventD(){
                 clevertap.event.push("Web Product Viewed", {
