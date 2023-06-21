@@ -11,7 +11,7 @@
         <script type="text/javascript">
             var clevertap = {event:[], profile:[], account:[], onUserLogin:[], notifications:[], privacy:[]};
             // replace with the CLEVERTAP_ACCOUNT_ID with the actual ACCOUNT ID value from your Dashboard -> Settings page
-            clevertap.account.push({"id": "TEST-489-7K5-676Z"});
+            clevertap.account.push({"id": "ZWW-WWW-WWRZ"});
             clevertap.privacy.push({optOut: false}); //set the flag to true, if the user of the device opts out of sharing their data
             clevertap.privacy.push({useIP: false}); //set the flag to true, if the user agrees to share their IP data
                 (function () {
@@ -53,6 +53,14 @@
                 box-shadow: 0 8px 16px 0 rgba(0,0,0,0.2), 0 6px 20px 0 rgba(0,0,0,0.2);
                 cursor: pointer;
             }
+            .bell{
+                position: absolute;
+                top: 40px;
+                right: 100px;
+                background-color: transparent; 
+                font-size: 40px;
+                cursor: pointer;
+            }
             button:active{
                 transform: translateY(4px);
             }
@@ -62,6 +70,9 @@
             .girl{
                 height: 500px;
                 width: 500px;
+            }
+            ct-web-inbox {
+                font-family: 'Times New Roman', Times, serif;
             }
         </style>
     </head>
@@ -75,6 +86,7 @@
         <button onclick="webPush()">Web Push</button> 
         <button onclick="emailTest()">Email Pop Up</button>
         <button onclick="apolloTest()">Apollo Test</button>
+        <div class="bell" id="inbox">🔔</div>
 
         
         <!-- <form action="#">
