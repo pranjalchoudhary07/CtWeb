@@ -47,6 +47,7 @@
       // will be called after the email id of the user has been fetched
       function wzrk_email_fetched(emailStr, profile) {
         document.getElementById("email").value = emailStr;
+        console.log(emailStr);
         if (!profile || !profile.groups || profile.groups.length === 0) {
           console.log("did not recv groups in callback");
         }
