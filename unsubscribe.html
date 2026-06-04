@@ -3,7 +3,7 @@
 <head>
 <title>Unsubscribe</title>
     <script type="text/javascript">
-        var clevertap = {event:[], profile:[], region: 'sg1', account:[], onUserLogin:[], notifications:[]};
+        var clevertap = {event:[], profile:[], region: 'sg1', account:[], onUserLogin:[], notifications:[], privacy:[]};
         clevertap.account.push({"id": "489-7K5-676Z"});
         (function() {
             var wzrk = document.createElement('script');
@@ -47,7 +47,7 @@
             <button class="btn-no"  onclick="goBack()">NO</button>
         </div>
     </div>
-    <div id="success">You've been unsubscribed successfully.</div>
+    <div id="success"></div>
 </div>
 
 <script>
@@ -55,7 +55,9 @@ let emailSourceGroup = '';
 let userEmail = '';
 let allGroups = [];
 
-// Wait for CleverTap SDK to be ready before calling getEmail
+/* ------------------------------------------------------------------
+   WAIT FOR SDK, THEN FETCH EMAIL + GROUPS
+------------------------------------------------------------------ */
 window.onload = function() {
     waitForCT();
 };
@@ -68,8 +70,9 @@ function waitForCT() {
     }
 }
 
-    
-
+/* ------------------------------------------------------------------
+   CALLBACK: Email + groups fetched successfully
+------------------------------------------------------------------ */
 function wzrk_email_fetched(emailStr, profile) {
     userEmail = emailStr;
     document.getElementById('loading').style.display = 'none';
@@ -85,9 +88,10 @@ function wzrk_email_fetched(emailStr, profile) {
     $WZRK_WR.setSubscriptionGroups(allGroups);
     $WZRK_WR.setUpdatedCategoryLong(profile);
 
-    // Identify the group this email was sent from.
-    // CleverTap passes the group name via the `e` URL param — use that if available,
-    // otherwise fall back to the first non-unsubscribed group.
+    // Identify the group this email was sent from:
+    // 1. Try the `e` URL param CleverTap appends to unsubscribe links
+    // 2. Fall back to first non-unsubscribed group
+    // 3. Last resort: first group in list
     var urlParams = new URLSearchParams(window.location.search);
     var groupFromUrl = urlParams.get('e');
 
@@ -111,15 +115,20 @@ function wzrk_email_fetched(emailStr, profile) {
     document.getElementById('content').style.display = 'block';
 }
 
-
+/* ------------------------------------------------------------------
+   CALLBACK: Email fetch failed
+------------------------------------------------------------------ */
 function wzrk_email_fetched_failed() {
     document.getElementById('loading').style.display = 'none';
     document.getElementById('content').innerHTML = '<p>Unable to load your subscription preferences. Please try again later.</p>';
     document.getElementById('content').style.display = 'block';
 }
-    
+
+/* ------------------------------------------------------------------
+   YES: Unsubscribe only from the source group
+------------------------------------------------------------------ */
 function doUnsubscribe() {
-    // Only mark the source group as unsubscribed; leave all other groups unchanged
+    // Only flip the source group; leave all other groups unchanged
     var updatedGroups = allGroups.map(function(g) {
         return {
             name: g.name,
@@ -130,17 +139,24 @@ function doUnsubscribe() {
     $WZRK_WR.changeSubscriptionGroups(false, updatedGroups);
 }
 
+/* ------------------------------------------------------------------
+   NO: Go back
+------------------------------------------------------------------ */
 function goBack() {
     history.back();
 }
 
+/* ------------------------------------------------------------------
+   CALLBACK: After CleverTap confirms subscription update
+------------------------------------------------------------------ */
 function wzrk_email_subscription(status) {
     document.getElementById('content').style.display = 'none';
-    document.getElementById('success').style.display = 'block';
-    document.getElementById('success').textContent = 
-        status == 0 
-            ? "You've been unsubscribed from " + emailSourceGroup + " emails." 
-            : "Your subscription preference has been updated.";
+    var successEl = document.getElementById('success');
+    successEl.style.display = 'block';
+    successEl.style.color = status == 0 ? '#00c853' : '#555';
+    successEl.textContent = status == 0
+        ? "You've been unsubscribed from " + emailSourceGroup + " emails."
+        : "Your subscription preference has been updated.";
 }
 </script>
 </body>
