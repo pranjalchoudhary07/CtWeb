@@ -1,112 +1,138 @@
+<!DOCTYPE html>
 <html>
-
 <head>
-    <title>Unsubscribe from email</title>
-
-    <!-- your WizRocket JS embed code goes here -->
-
+<title>Unsubscribe</title>
     <script type="text/javascript">
-        var clevertap = {event:[], profile:[], account:[], onUserLogin:[], notifications:[], privacy:[]};
-    // replace with the CLEVERTAP_ACCOUNT_ID with the actual ACCOUNT ID value from your Dashboard -> Settings page
-   clevertap.account.push({"id": "489-7K5-676Z"});
-   clevertap.privacy.push({optOut: false}); //set the flag to true, if the user of the device opts out of sharing their data
-   clevertap.privacy.push({useIP: false}); //set the flag to true, if the user agrees to share their IP data
-    (function () {
+        var clevertap = {event:[], profile:[], region: 'sg1', account:[], onUserLogin:[], notifications:[]};
+        clevertap.account.push({"id": "9W6-8W9-547Z"});
+        (function() {
             var wzrk = document.createElement('script');
             wzrk.type = 'text/javascript';
             wzrk.async = true;
-            wzrk.src = ('https:' == document.location.protocol ? 'https://d2r1yp2w7bby2u.cloudfront.net' : 'http://static.clevertap.com') + '/js/clevertap.min.js';
+            wzrk.src = 'https://d2r1yp2w7bby2u.cloudfront.net/js/clevertap.min.js';
             var s = document.getElementsByTagName('script')[0];
             s.parentNode.insertBefore(wzrk, s);
-     })();
-   </script>
-
-
+        })();
+    </script>
+<style>
+    body { font-family: Arial, sans-serif; display: flex; justify-content: center; align-items: center; min-height: 100vh; margin: 0; background: #f5f5f5; }
+    .card { background: white; border-radius: 12px; padding: 40px; max-width: 400px; width: 90%; text-align: center; box-shadow: 0 2px 12px rgba(0,0,0,0.1); }
+    h2 { margin-bottom: 8px; }
+    .underline { display: inline-block; border-bottom: 3px solid #00c853; padding-bottom: 2px; }
+    p { color: #555; font-size: 14px; line-height: 1.6; margin: 16px 0; }
+    .email { font-weight: bold; color: #222; }
+    .group-name { font-weight: bold; color: #222; }
+    .buttons { display: flex; gap: 16px; justify-content: center; margin-top: 24px; }
+    .btn-yes { background: #e91e8c; color: white; border: none; padding: 14px 40px; border-radius: 6px; font-size: 15px; font-weight: bold; cursor: pointer; }
+    .btn-no  { background: white; color: #333; border: 2px solid #ccc; padding: 14px 40px; border-radius: 6px; font-size: 15px; font-weight: bold; cursor: pointer; }
+    .btn-yes:hover { background: #c2185b; }
+    .btn-no:hover  { background: #f5f5f5; }
+    #success { display: none; color: #00c853; font-weight: bold; margin-top: 20px; }
+    #loading { color: #999; font-size: 14px; }
+</style>
 </head>
-
 <body>
+<div class="card">
+    <h2><span class="underline">Unsubscribe</span></h2>
+    <div id="loading"><p>Loading your preferences...</p></div>
+    <div id="content" style="display:none">
+        <p>
+            Use the Unsubscribe button to stop receiving 
+            <span class="group-name" id="group-display"></span> 
+            emails from us at <span class="email" id="email-display"></span>.
+        </p>
+        <p>You will miss out on our deals and exclusive offers. Are you sure you want to unsubscribe?</p>
+        <div class="buttons">
+            <button class="btn-yes" onclick="doUnsubscribe()">YES</button>
+            <button class="btn-no"  onclick="goBack()">NO</button>
+        </div>
+    </div>
+    <div id="success">You've been unsubscribed successfully.</div>
+</div>
 
+<script>
+let emailSourceGroup = '';
+let userEmail = '';
+let allGroups = [];
 
-    <div>    
-    <h4>I want to unsubscribe from future emails
-    </h4>        
-    <input type="text" id="email" /> 
-    <br/><br/>
-    <!-- Displaying unsubscribe groups in the below div once loaded -->
-    <div id="unsubscribe-groups" style="display: none"></div>
-    <!-- Unsubscribe groups buttont. User will click here and it should call `changeSubscriptionGroups`
-        method to send the request to CleverTap. -->
-    <button onclick="changeSubscriptionGroups()">Update Subscription Groups</button>    
- </div>  
- <script> 
-   window.onload = function() {
-        var isReEncode = false //Should be true only if your server is url encoding the URL on unsubscribe landing page     
-        var withGroups = true  // Should be true if the unsubscribe groups should be displayed on the landing page.
-        $WZRK_WR.getEmail(false, withGroups);
-    };
-    // will be called after the email id of the user has been fetched
-    function wzrk_email_fetched(emailStr, profile) {
-        document.getElementById("email").value = emailStr;
-        if(!profile || !profile.groups || profile.groups.length === 0) {
-            console.log("did not recv groups in callback");
-        }
-        var subscriptionGroups = profile.groups; // will be recvd only if withGroups passed true above
-        $WZRK_WR.setSubscriptionGroups(subscriptionGroups); // Can also be set here and can be retrieved by calling `$WZRK_WR.getSubscriptionGroups` method
-         $WZRK_WR.setUpdatedCategoryLong(profile);
-        displayGroups()
+// Wait for CleverTap SDK to be ready before calling getEmail
+window.onload = function() {
+    waitForCT();
+};
+
+function waitForCT() {
+    if (typeof $WZRK_WR !== 'undefined' && typeof $WZRK_WR.getEmail === 'function') {
+        $WZRK_WR.getEmail(false, true); // withGroups = true
+    } else {
+        setTimeout(waitForCT, 100);
     }
-  function displayGroups() {
-    //   Fetching groups
-      var subscriptionGroups = $WZRK_WR.getSubscriptionGroups();
-    //  Rendering groups in above html div
-      var addList = document.getElementById('unsubscribe-groups');
-            addList.style.display = 'block';
-            for(var i = 0; i < subscriptionGroups.length; i++) {
-                var obj = subscriptionGroups[i];
-                var checkBox = document.createElement("INPUT");
-                var isUnsubscribed = obj.isUnsubscribed
-                checkBox.setAttribute("type", "checkbox");
-                if(isUnsubscribed){
-                    checkBox.setAttribute("checked", true);
-                }
-                checkBox.setAttribute("name", obj.name)
-                checkBox.setAttribute("id", obj.name)
-                checkBox.setAttribute("class", "ct-unsub-group-input-item");
-                var label = document.createElement("LABEL");
-                label.setAttribute("for", obj.name)
-                label.innerHTML = "Unsubscribe to " + obj.name 
-                addList.appendChild(label);
-                addList.appendChild(checkBox);
-                addList.append(document.createElement('br'));
-            }
-  }
-// This function is used to send groups updation request. User can directly call
-// `$WZRK_WR.changeSubscriptionGroups(isReencode, updatedGroups)` by passing updated groups in format specified.
-   function changeSubscriptionGroups(){
-    let unsubcribeGroups = [];
-        var elements = document.getElementsByClassName(
-            "ct-unsub-group-input-item");
-        for (var i = 0; i < elements.length; i++) {
-            var element = elements[i];
-            if(element.name) {
-                var data = {name: element.name, isUnsubscribed: element.checked}
-                unsubcribeGroups.push(data)
-            }
-        }
-        $WZRK_WR.changeSubscriptionGroups(false, unsubcribeGroups);
-     } 
-    // will be called after the subscription preferences for the user have been updated
-    function wzrk_email_subscription(status) {
-        //status 0 : unsubscribed, status 1 : subscribed
-        // todo - you can show a success message to the user from here
-        var statusLabel = 'subscribed';
-        if (status == 0) {
-            statusLabel = 'unsubscribed';
-        }
-        alert("You've been "+ status + statusLabel);
-    }
- </script>
+}
 
+function wzrk_email_fetched(emailStr, profile) {
+    userEmail = emailStr;
+    document.getElementById('loading').style.display = 'none';
+
+    if (!profile || !profile.groups || profile.groups.length === 0) {
+        document.getElementById('content').innerHTML = '<p>No subscription groups found.</p>';
+        document.getElementById('content').style.display = 'block';
+        return;
+    }
+
+    allGroups = profile.groups;
+
+    $WZRK_WR.setSubscriptionGroups(allGroups);
+    $WZRK_WR.setUpdatedCategoryLong(profile);
+
+    // Identify the group this email was sent from.
+    // CleverTap passes the group name via the `e` URL param — use that if available,
+    // otherwise fall back to the first non-unsubscribed group.
+    var urlParams = new URLSearchParams(window.location.search);
+    var groupFromUrl = urlParams.get('e');
+
+    var sourceGroup;
+    if (groupFromUrl) {
+        sourceGroup = allGroups.find(function(g) {
+            return g.name === groupFromUrl;
+        });
+    }
+    if (!sourceGroup) {
+        sourceGroup = allGroups.find(function(g) { return !g.isUnsubscribed; });
+    }
+    if (!sourceGroup) {
+        sourceGroup = allGroups[0];
+    }
+
+    emailSourceGroup = sourceGroup.name;
+
+    document.getElementById('group-display').textContent = emailSourceGroup;
+    document.getElementById('email-display').textContent = emailStr;
+    document.getElementById('content').style.display = 'block';
+}
+
+function doUnsubscribe() {
+    // Only mark the source group as unsubscribed; leave all other groups unchanged
+    var updatedGroups = allGroups.map(function(g) {
+        return {
+            name: g.name,
+            isUnsubscribed: g.name === emailSourceGroup ? true : g.isUnsubscribed
+        };
+    });
+
+    $WZRK_WR.changeSubscriptionGroups(false, updatedGroups);
+}
+
+function goBack() {
+    history.back();
+}
+
+function wzrk_email_subscription(status) {
+    document.getElementById('content').style.display = 'none';
+    document.getElementById('success').style.display = 'block';
+    document.getElementById('success').textContent = 
+        status == 0 
+            ? "You've been unsubscribed from " + emailSourceGroup + " emails." 
+            : "Your subscription preference has been updated.";
+}
+</script>
 </body>
-
 </html>
