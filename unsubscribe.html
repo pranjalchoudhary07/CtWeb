@@ -5,18 +5,20 @@
     <script type="text/javascript">
         var clevertap = {event:[], profile:[], region: 'sg1', account:[], onUserLogin:[], notifications:[], privacy:[]};
         clevertap.account.push({"id": "489-7K5-676Z"});
+        clevertap.privacy.push({optOut: false});
+        clevertap.privacy.push({useIP: false});
         (function() {
             var wzrk = document.createElement('script');
             wzrk.type = 'text/javascript';
             wzrk.async = true;
-            wzrk.src = 'https://d2r1yp2w7bby2u.cloudfront.net/js/clevertap.min.js';
+            wzrk.src = ('https:' == document.location.protocol ? 'https://d2r1yp2w7bby2u.cloudfront.net' : 'http://static.clevertap.com') + '/js/clevertap.min.js';
             var s = document.getElementsByTagName('script')[0];
             s.parentNode.insertBefore(wzrk, s);
         })();
     </script>
 <style>
     body { font-family: Arial, sans-serif; display: flex; justify-content: center; align-items: center; min-height: 100vh; margin: 0; background: #f5f5f5; }
-    .card { background: white; border-radius: 12px; padding: 40px; max-width: 400px; width: 90%; text-align: center; box-shadow: 0 2px 12px rgba(0,0,0,0.1); }
+    .card { background: white; border-radius: 12px; padding: 40px; max-width: 420px; width: 90%; text-align: center; box-shadow: 0 2px 12px rgba(0,0,0,0.1); }
     h2 { margin-bottom: 8px; }
     .underline { display: inline-block; border-bottom: 3px solid #00c853; padding-bottom: 2px; }
     p { color: #555; font-size: 14px; line-height: 1.6; margin: 16px 0; }
@@ -27,7 +29,7 @@
     .btn-no  { background: white; color: #333; border: 2px solid #ccc; padding: 14px 40px; border-radius: 6px; font-size: 15px; font-weight: bold; cursor: pointer; }
     .btn-yes:hover { background: #c2185b; }
     .btn-no:hover  { background: #f5f5f5; }
-    #success { display: none; color: #00c853; font-weight: bold; margin-top: 20px; }
+    #success { display: none; font-weight: bold; margin-top: 20px; color: #00c853; }
     #loading { color: #999; font-size: 14px; }
 </style>
 </head>
@@ -35,120 +37,115 @@
 <div class="card">
     <h2><span class="underline">Unsubscribe</span></h2>
     <div id="loading"><p>Loading your preferences...</p></div>
+
     <div id="content" style="display:none">
         <p>
-            Use the Unsubscribe button to stop receiving 
-            <span class="group-name" id="group-display"></span> 
+            Use the Unsubscribe button to stop receiving
+            <span class="group-name" id="group-display"></span>
             emails from us at <span class="email" id="email-display"></span>.
         </p>
         <p>You will miss out on our deals and exclusive offers. Are you sure you want to unsubscribe?</p>
+
+        <!-- Single hidden checkbox for the source group — same pattern as sample -->
+        <div id="unsubscribe-groups" style="display:none"></div>
+
         <div class="buttons">
-            <button class="btn-yes" onclick="doUnsubscribe()">YES</button>
+            <button class="btn-yes" onclick="changeSubscriptionGroups()">YES</button>
             <button class="btn-no"  onclick="goBack()">NO</button>
         </div>
     </div>
+
     <div id="success"></div>
 </div>
 
 <script>
-let emailSourceGroup = '';
-let userEmail = '';
 let allGroups = [];
+let emailSourceGroup = '';
 
-/* ------------------------------------------------------------------
-   WAIT FOR SDK, THEN FETCH EMAIL + GROUPS
------------------------------------------------------------------- */
 window.onload = function() {
     waitForCT();
 };
 
 function waitForCT() {
     if (typeof $WZRK_WR !== 'undefined' && typeof $WZRK_WR.getEmail === 'function') {
-        $WZRK_WR.getEmail(false, true); // withGroups = true
+        $WZRK_WR.getEmail(false, true);
     } else {
         setTimeout(waitForCT, 100);
     }
 }
 
-/* ------------------------------------------------------------------
-   CALLBACK: Email + groups fetched successfully
------------------------------------------------------------------- */
 function wzrk_email_fetched(emailStr, profile) {
-    userEmail = emailStr;
     document.getElementById('loading').style.display = 'none';
 
     if (!profile || !profile.groups || profile.groups.length === 0) {
-        document.getElementById('content').innerHTML = '<p>No subscription groups found.</p>';
+        document.getElementById('content').innerHTML = '<p style="color:#888">No subscription groups found.</p>';
         document.getElementById('content').style.display = 'block';
         return;
     }
 
     allGroups = profile.groups;
-
     $WZRK_WR.setSubscriptionGroups(allGroups);
     $WZRK_WR.setUpdatedCategoryLong(profile);
 
-    // Identify the group this email was sent from:
-    // 1. Try the `e` URL param CleverTap appends to unsubscribe links
-    // 2. Fall back to first non-unsubscribed group
-    // 3. Last resort: first group in list
-    var urlParams = new URLSearchParams(window.location.search);
-    var groupFromUrl = urlParams.get('e');
+    displayGroups(emailStr);
+}
 
-    var sourceGroup;
-    if (groupFromUrl) {
-        sourceGroup = allGroups.find(function(g) {
-            return g.name === groupFromUrl;
-        });
-    }
-    if (!sourceGroup) {
-        sourceGroup = allGroups.find(function(g) { return !g.isUnsubscribed; });
-    }
-    if (!sourceGroup) {
-        sourceGroup = allGroups[0];
+function displayGroups(emailStr) {
+    var subscriptionGroups = $WZRK_WR.getSubscriptionGroups();
+    var container = document.getElementById('unsubscribe-groups');
+    container.innerHTML = '';
+
+    // Build ALL checkboxes exactly like the sample — but hidden from view
+    // We only show the ONE group this email was sent from in the UI text
+    for (var i = 0; i < subscriptionGroups.length; i++) {
+        var obj = subscriptionGroups[i];
+        var checkBox = document.createElement('INPUT');
+        checkBox.setAttribute('type', 'checkbox');
+        checkBox.setAttribute('name', obj.name);
+        checkBox.setAttribute('id', obj.name);
+        checkBox.setAttribute('class', 'ct-unsub-group-input-item');
+        if (obj.isUnsubscribed) {
+            checkBox.setAttribute('checked', true);
+        }
+        container.appendChild(checkBox);
     }
 
-    emailSourceGroup = sourceGroup.name;
+    // The source group = the one NOT already unsubscribed (came from this campaign)
+    var sourceGroup = subscriptionGroups.find(function(g) { return !g.isUnsubscribed; });
+    emailSourceGroup = sourceGroup ? sourceGroup.name : subscriptionGroups[0].name;
 
+    // Show only the source group name in the UI
     document.getElementById('group-display').textContent = emailSourceGroup;
     document.getElementById('email-display').textContent = emailStr;
     document.getElementById('content').style.display = 'block';
 }
 
-/* ------------------------------------------------------------------
-   CALLBACK: Email fetch failed
------------------------------------------------------------------- */
+function changeSubscriptionGroups() {
+    var elements = document.getElementsByClassName('ct-unsub-group-input-item');
+    var unsubscribeGroups = [];
+
+    for (var i = 0; i < elements.length; i++) {
+        var el = elements[i];
+        // Only tick the source group; keep all others exactly as they were
+        unsubscribeGroups.push({
+            name: el.name,
+            isUnsubscribed: el.name === emailSourceGroup ? true : el.checked
+        });
+    }
+
+    $WZRK_WR.changeSubscriptionGroups(false, unsubscribeGroups);
+}
+
 function wzrk_email_fetched_failed() {
     document.getElementById('loading').style.display = 'none';
-    document.getElementById('content').innerHTML = '<p>Unable to load your subscription preferences. Please try again later.</p>';
+    document.getElementById('content').innerHTML = '<p style="color:#888">Unable to load your subscription preferences. Please use the unsubscribe link directly from your email.</p>';
     document.getElementById('content').style.display = 'block';
 }
 
-/* ------------------------------------------------------------------
-   YES: Unsubscribe only from the source group
------------------------------------------------------------------- */
-function doUnsubscribe() {
-    // Only flip the source group; leave all other groups unchanged
-    var updatedGroups = allGroups.map(function(g) {
-        return {
-            name: g.name,
-            isUnsubscribed: g.name === emailSourceGroup ? true : g.isUnsubscribed
-        };
-    });
-
-    $WZRK_WR.changeSubscriptionGroups(false, updatedGroups);
-}
-
-/* ------------------------------------------------------------------
-   NO: Go back
------------------------------------------------------------------- */
 function goBack() {
     history.back();
 }
 
-/* ------------------------------------------------------------------
-   CALLBACK: After CleverTap confirms subscription update
------------------------------------------------------------------- */
 function wzrk_email_subscription(status) {
     document.getElementById('content').style.display = 'none';
     var successEl = document.getElementById('success');
