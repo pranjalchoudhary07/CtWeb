@@ -68,6 +68,8 @@ function waitForCT() {
     }
 }
 
+    
+
 function wzrk_email_fetched(emailStr, profile) {
     userEmail = emailStr;
     document.getElementById('loading').style.display = 'none';
@@ -109,6 +111,13 @@ function wzrk_email_fetched(emailStr, profile) {
     document.getElementById('content').style.display = 'block';
 }
 
+
+function wzrk_email_fetched_failed() {
+    document.getElementById('loading').style.display = 'none';
+    document.getElementById('content').innerHTML = '<p>Unable to load your subscription preferences. Please try again later.</p>';
+    document.getElementById('content').style.display = 'block';
+}
+    
 function doUnsubscribe() {
     // Only mark the source group as unsubscribed; leave all other groups unchanged
     var updatedGroups = allGroups.map(function(g) {
