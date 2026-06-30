@@ -3,7 +3,7 @@
 <head>
 <title>Unsubscribe</title>
     <script type="text/javascript">
-        var clevertap = {event:[], profile:[], account:[], onUserLogin:[], notifications:[], privacy:[]};
+        var clevertap = {event:[], profile:[], region: 'sg1', account:[], onUserLogin:[], notifications:[], privacy:[]};
         clevertap.account.push({"id": "R57-875-KK7Z"});
         clevertap.privacy.push({optOut: false});
         clevertap.privacy.push({useIP: false});
@@ -29,6 +29,7 @@
     .btn-no  { background: white; color: #333; border: 2px solid #ccc; padding: 14px 40px; border-radius: 6px; font-size: 15px; font-weight: bold; cursor: pointer; }
     .btn-yes:hover { background: #c2185b; }
     .btn-no:hover  { background: #f5f5f5; }
+    .note-ok { color: #00c853; font-weight: bold; }
     #success { display: none; font-weight: bold; margin-top: 20px; color: #00c853; }
     #loading { color: #999; font-size: 14px; }
 </style>
@@ -36,8 +37,10 @@
 <body>
 <div class="card">
     <h2><span class="underline">Unsubscribe</span></h2>
+
     <div id="loading"><p>Loading your preferences...</p></div>
 
+    <!-- Shown when the campaign's group is still subscribed -->
     <div id="content" style="display:none">
         <p>
             Use the Unsubscribe button to stop receiving
@@ -45,115 +48,120 @@
             emails from us at <span class="email" id="email-display"></span>.
         </p>
         <p>You will miss out on our deals and exclusive offers. Are you sure you want to unsubscribe?</p>
-
-        <!-- Single hidden checkbox for the source group — same pattern as sample -->
-        <div id="unsubscribe-groups" style="display:none"></div>
-
         <div class="buttons">
             <button class="btn-yes" onclick="changeSubscriptionGroups()">YES</button>
             <button class="btn-no"  onclick="goBack()">NO</button>
         </div>
     </div>
 
+    <!-- Shown when the campaign's group is ALREADY unsubscribed (repeat visit) -->
+    <div id="already" style="display:none">
+        <p>
+            You've already unsubscribed from
+            <span class="group-name" id="already-group"></span>
+            emails at <span class="email" id="already-email"></span>.
+        </p>
+        <p class="note-ok">No further action is needed.</p>
+    </div>
+
+    <!-- Shown after a successful action this visit -->
     <div id="success"></div>
 </div>
 
 <script>
-let allGroups = [];
-let emailSourceGroup = '';
+/*
+ * Group-unsubscribe landing page.
+ *
+ * Key facts this relies on (confirmed against CleverTap's EmailSubscriptionServlet behaviour):
+ *  - getEmail(reEncoded, withGroups): pass withGroups = true so profile.groups is populated.
+ *  - On a page_type=group link, profile.groups is server-filtered to ONLY this campaign's group(s).
+ *    => No need to guess the source group or hard-code its name.
+ *  - Each group's isUnsubscribed is re-fetched live on every load, so it is the authoritative
+ *    "already unsubscribed?" signal for repeat visits. No cookies / localStorage needed.
+ */
 
-window.onload = function() {
-    waitForCT();
-};
+var campaignGroups = [];   // the campaign's group(s), as returned by the SDK
+
+window.onload = waitForCT;
 
 function waitForCT() {
     if (typeof $WZRK_WR !== 'undefined' && typeof $WZRK_WR.getEmail === 'function') {
-        $WZRK_WR.getEmail(false, true);
+        $WZRK_WR.getEmail(false, true);   // withGroups = true
     } else {
         setTimeout(waitForCT, 100);
     }
 }
 
 function wzrk_email_fetched(emailStr, profile) {
-    document.getElementById('loading').style.display = 'none';
+    hide('loading');
 
-    if (!profile || !profile.groups || profile.groups.length === 0) {
-        document.getElementById('content').innerHTML = '<p style="color:#888">No subscription groups found.</p>';
-        document.getElementById('content').style.display = 'block';
+    if (!profile || !Array.isArray(profile.groups) || profile.groups.length === 0) {
+        showInline('No subscription groups are associated with this email.');
         return;
     }
 
-    allGroups = profile.groups;
-    $WZRK_WR.setSubscriptionGroups(allGroups);
-    $WZRK_WR.setUpdatedCategoryLong(profile);
+    // profile.groups is already scoped to this campaign on a group-unsubscribe link.
+    campaignGroups = profile.groups;
 
-    displayGroups(emailStr);
-}
-
-function displayGroups(emailStr) {
-    var subscriptionGroups = $WZRK_WR.getSubscriptionGroups();
-    var container = document.getElementById('unsubscribe-groups');
-    container.innerHTML = '';
-
-    // Build ALL checkboxes exactly like the sample — but hidden from view
-    // We only show the ONE group this email was sent from in the UI text
-    for (var i = 0; i < subscriptionGroups.length; i++) {
-        var obj = subscriptionGroups[i];
-        var checkBox = document.createElement('INPUT');
-        checkBox.setAttribute('type', 'checkbox');
-        checkBox.setAttribute('name', obj.name);
-        checkBox.setAttribute('id', obj.name);
-        checkBox.setAttribute('class', 'ct-unsub-group-input-item');
-        if (obj.isUnsubscribed) {
-            checkBox.setAttribute('checked', true);
-        }
-        container.appendChild(checkBox);
+    // Keep the SDK's internal group list in sync so changeSubscriptionGroups() acts on the
+    // same scoped set (and never touches the user's other account groups).
+    $WZRK_WR.setSubscriptionGroups(campaignGroups);
+    if (typeof $WZRK_WR.setUpdatedCategoryLong === 'function') {
+        $WZRK_WR.setUpdatedCategoryLong(profile);
     }
 
-    // The source group = the one NOT already unsubscribed (came from this campaign)
-    var sourceGroup = subscriptionGroups.find(function(g) { return !g.isUnsubscribed; });
-    emailSourceGroup = sourceGroup ? sourceGroup.name : subscriptionGroups[0].name;
+    var groupNames = campaignGroups.map(function (g) { return g.name; }).join(', ');
 
-    // Show only the source group name in the UI
-    document.getElementById('group-display').textContent = emailSourceGroup;
-    document.getElementById('email-display').textContent = emailStr;
-    document.getElementById('content').style.display = 'block';
+    // Authoritative repeat-visit check: are ALL of this campaign's groups already off?
+    var alreadyUnsubscribed = campaignGroups.every(function (g) { return g.isUnsubscribed === true; });
+
+    if (alreadyUnsubscribed) {
+        document.getElementById('already-group').textContent = groupNames;
+        document.getElementById('already-email').textContent = emailStr;
+        show('already');
+    } else {
+        document.getElementById('group-display').textContent = groupNames;
+        document.getElementById('email-display').textContent = emailStr;
+        show('content');
+    }
 }
 
 function changeSubscriptionGroups() {
-    var elements = document.getElementsByClassName('ct-unsub-group-input-item');
-    var unsubscribeGroups = [];
-
-    for (var i = 0; i < elements.length; i++) {
-        var el = elements[i];
-        // Only tick the source group; keep all others exactly as they were
-        unsubscribeGroups.push({
-            name: el.name,
-            isUnsubscribed: el.name === emailSourceGroup ? true : el.checked
-        });
-    }
-
-    $WZRK_WR.changeSubscriptionGroups(false, unsubscribeGroups);
-}
-
-function wzrk_email_fetched_failed() {
-    document.getElementById('loading').style.display = 'none';
-    document.getElementById('content').innerHTML = '<p style="color:#888">Unable to load your subscription preferences. Please use the unsubscribe link directly from your email.</p>';
-    document.getElementById('content').style.display = 'block';
-}
-
-function goBack() {
-    history.back();
+    // Unsubscribe from exactly the campaign's scoped group(s).
+    var groups = $WZRK_WR.getSubscriptionGroups();
+    var updated = groups.map(function (g) { return { name: g.name, isUnsubscribed: true }; });
+    $WZRK_WR.changeSubscriptionGroups(false, updated);
 }
 
 function wzrk_email_subscription(status) {
-    document.getElementById('content').style.display = 'none';
-    var successEl = document.getElementById('success');
-    successEl.style.display = 'block';
-    successEl.style.color = status == 0 ? '#00c853' : '#555';
-    successEl.textContent = status == 0
-        ? "You've been unsubscribed from " + emailSourceGroup + " emails."
-        : "Your subscription preference has been updated.";
+    // status 0 : unsubscribed, status 1 : (re)subscribed
+    hide('content');
+    var el = document.getElementById('success');
+    el.style.display = 'block';
+    var groupNames = campaignGroups.map(function (g) { return g.name; }).join(', ');
+    if (status == 0) {
+        el.style.color = '#00c853';
+        el.textContent = "You've been unsubscribed from " + groupNames + " emails.";
+    } else {
+        el.style.color = '#555';
+        el.textContent = "Your subscription preference has been updated.";
+    }
+}
+
+function wzrk_email_fetched_failed() {
+    hide('loading');
+    showInline('Unable to load your subscription preferences. Please use the unsubscribe link directly from your email.');
+}
+
+function goBack() { history.back(); }
+
+/* --- small helpers --- */
+function show(id) { document.getElementById(id).style.display = 'block'; }
+function hide(id) { document.getElementById(id).style.display = 'none'; }
+function showInline(msg) {
+    var c = document.getElementById('content');
+    c.innerHTML = '<p style="color:#888">' + msg + '</p>';
+    c.style.display = 'block';
 }
 </script>
 </body>
